@@ -1,0 +1,39 @@
+
+setwd("D:/pgdm/3RD TERM/BUSINESS ANALYTICS")
+Titanic
+titanic <- read.csv("titanic.csv")
+str(titanic)
+titanic$Class <- as.factor(titanic$Class)
+summary(titanic)
+# age has missing values and this will create a problem. so by doing imputations the average values will help in 
+# predicting the model better.
+library(Hmisc)
+titanic$Age <- impute(titanic$Age, mean)
+titanic$Fare <- impute(titanic$Fare, mean)
+summary(titanic)
+attach(titanic)
+titanic.glm <- glm(Survival~Fare+Class+Age+Gender, family = binomial, data = titanic)
+titanic.glm
+?boxplot
+boxplot(Fare, data = titanic)
+contrasts(titanic$Class)
+# class within a class. So create a reference level.
+matrix(c(1,0,0,0,0,1),nrow = 3, byrow = TRUE)
+cmatrix <- matrix(c(1,0,0,0,0,1),nrow=3, byrow = TRUE) 
+rownames(cmatrix) <- c("1", "2", "3") #we change the row names and column names as we are changing the reference level.
+colnames(cmatrix) <- c("1", "3")
+contrasts(titanic$Class) <- cmatrix
+cmatrix
+titanic.glm <- glm(Survival~Fare+Class+Age+Gender, family = binomial, data = titanic)
+titanic.glm
+summary(titanic.glm)
+titanic.rpart <- rpart(Survival~Age+Gender+Class+Fare, data=titanic)
+titanic.rpart
+?rpart
+plot(titanic.rpart)
+plotcp(titanic.rpart)
+install.packages("ineq")
+library(ineq)
+ineq(Survival, type = c("Gini"))
+?ineq
+text(titanic.rpart)
