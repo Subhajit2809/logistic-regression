@@ -1,0 +1,69 @@
+setwd("D:/pgdm/5TH TERM/FRA")
+default <- read.csv("05.loan_default.csv")
+
+#to check the number of 1s and 0s
+str(default)
+table(default$bad_flag)
+install.packages("caTools")
+library(caTools)
+
+set.seed(100)
+
+split = sample.split(default$bad_flag, SplitRatio = 0.75)
+
+#create TRAINING data
+defaultTrain <- subset(default, split == TRUE)
+table(defaultTrain$bad_flag)
+
+#SMOTE THE DATA
+library(DMwR)
+
+#ensure that the badflag is a factor variable
+defaultTrain$bad_flag = as.factor(defaultTrain$bad_flag)
+defaultTrainSmote = SMOTE(bad_flag~., defaultTrain, perc.over = 500)
+
+#checking
+table(defaultTrain$bad_flag)
+table(defaultTrainSmote$bad_flag)
+
+defaultTest <- subset(default, split == FALSE)
+
+model.glm <- glm(bad_flag ~ tenure+margin+amtfin+exist, family = binomial, data = defaultTrainSmote)
+#1. Model Equation Decision ~ Score1+Score2
+#2. Data : approval_train
+#3. family: binomial
+summary(model.glm)
+
+
+predictTest <- predict(model.glm, newdata = defaultTest, type = "response") 
+#type= response gives me the probabilities
+head(predictTest)
+
+
+#using the naive rule of 0.5 rule
+predictDecision = predictTest >0.5
+#if implied prob > 0,5 predict 1 else 0
+
+confusion_matrix <- table(defaultTest$bad_flag, predictDecision)
+confusion_matrix
+
+library(ROCR)
+
+#Create ROCR OBJECTS
+ROcRTest <- prediction(predictTest, defaultTest$bad_flag)
+ROCRTest_pref <- performance(ROcRTest, "tpr", "fpr")
+
+#plot
+plot(ROCRTest_pref)
+plot(ROCRTest_pref, colorize=TRUE)
+plot(ROCRTest_pref, colorize=TRUE, print.cutoffs.at=seq(0,1,0.1), text.adj=c(-0.2,1.7))
+
+#obtain AUC
+auc<- performance(ROcRTest, "auc")
+auc
+auc_val <- as.numeric(auc@y.values)
+auc_val
+
+#else directly use this for confusion matrix:
+library(SDMTools)
+confusion.matrix(defaultTest$bad_flag, predictTest, threshold=.5)
